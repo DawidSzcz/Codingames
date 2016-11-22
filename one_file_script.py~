@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+import os, sys, re
+
+module = sys.argv[1]
+if len(sys.argv) > 2:
+        folder  = "/" + sys.argv[2] + "/"
+        typ     = '.' + sys.argv[3]
+else:
+        folder  = "/protected/"
+        typ     = ".php"
+        
+workspace = "/home/kazik/Documents/Studia/CodinGames/"
+directory = workspace+module+folder
+out = workspace + module + "/" + module
+print "module: ", module
+print "directory: ", directory
+print "typ: ", typ
+
+lines = []
+
+for file in os.listdir(directory):
+        f = open(directory + file, 'r')
+        lines.extend(filter(lambda x: '?>' not in x and '<?php' not in x, f.readlines()))
+        f.close()
+   
+print "lines num: ", len(lines)  
+out = open(out + typ, 'w+')
+
+if typ == '.php':
+        out.write("<?php\n")
+        out.writelines(lines)
+if typ == '.java':
+        imports = filter(lambda x: re.match('\s*import', x), lines)
+        lines   = filter(lambda x: not re.match('\s*import', x), lines) 
+        out.writelines(imports)
+        out.writelines(lines)
+
+out.close()
