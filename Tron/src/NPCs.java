@@ -21,7 +21,8 @@ class NPCs {
             }
         }
     }
-    public void insert(int id, Point point) throws Exception {
+    public void insert(int id, Point point) throws Exception
+    {
         if(point == null) {
             while (id < this.n - 1) {
                 npcs[id] = npcs[++id];
@@ -33,37 +34,37 @@ class NPCs {
         }
     }
 
-    public boolean defeated(int i){
+    public boolean defeated(int i)
+    {
         return npcs[i] == null && i != p;
     }
 
     public String toString()
     {
         String ret = "";
-        for(NPC npc : npcs){
+        for (NPC npc : npcs) {
             ret += npc.toString();
         }
         return ret;
     }
-    public String getMove(Board board)
+    public NPC[] getQueue()
     {
-        if(this.move == null) {
-            this.move = new Move(board, this.p, this.n);
-            this.makeMove(this.move, 0);
+        NPC[] ids = new NPC[this.n];
+        for(int i = 0; i < this.n; i++) {
+            ids[i] = npcs[i];
         }
-        Leaf best = this.move.findBest();
-        System.err.println("Move " + this.move);
-        return this.me.makeMove(best.findMove(this.p));
+        return ids;
     }
-    private void makeMove(Move move, int i)
+    public int playersCount()
     {
-        if(i >= 2 *this.n){
-
-        } else {
-            npcs[i%this.n].makeMove(move, i);
-            for(Move nextMove : move.nextMoves) {
-                this.makeMove(nextMove, i + 1);
-            }
-        }
+        return this.n;
+    }
+    public void makeMove(Point p)
+    {
+        me.makeMove(p);
+    }
+    public String getMove()
+    {
+        return me.getMove();
     }
 }

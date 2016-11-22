@@ -25,18 +25,15 @@ abstract class NPC
 
     public void makeMove(Move move, int remainig)
     {
-        move.insertNexts(this.getPossibilities(move), remainig);
-    }
-
-    private Point[] getPossibilities(Move m)
-    {
-        while(m.previous != null){
-            if(m.id == this.id) {
-                return m.move.getMoves();
-            } else {
-                m = m.previous;
-            }
+        Point pt;
+        if(move.previosFP != null){
+            System.err.print("HASPREV ");
+            pt = move.previosFP.move;
+        } else {
+            pt = this.body.peek();
         }
-        return this.body.peek().getMoves();
+
+        System.err.println("Make move for " + this.id + " " + pt);
+        move.insertNexts(this.id, pt.getMoves(), remainig);
     }
 }

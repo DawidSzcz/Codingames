@@ -3,13 +3,17 @@ import java.util.StringTokenizer;
 class Board {
     int[][] board = new int[20][30];
     private NPCs npcs = null;
+    private MinMaxTree mmt;
 
-    public boolean isInitialized(){
+    public boolean isInitialized()
+    {
         return  npcs != null;
     }
 
-    public void init(int P, int N){
+    public void init(int P, int N)
+    {
         npcs = new NPCs(P, N, this);
+        mmt = new MinMaxTree(npcs, this, P, 2);
     }
     public void insert(int id, String row) throws Exception
     {
@@ -56,7 +60,8 @@ class Board {
 
     public String getMove()
     {
-        return npcs.getMove(this);
+        mmt.makeMove();
+        return mmt.getMove();
     }
 
     public boolean isBusy(Point p)

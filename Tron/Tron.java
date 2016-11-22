@@ -7,61 +7,11 @@ import java.util.Stack;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.*;
-
-class Leaf extends Move{
-    public Leaf(int id, Point point, Move prev, int stepsRemain)
-    {
-        super(id, point, prev, stepsRemain);
-        int score = this.score();
-        //System.err.println("BFS: " + score);
-
-        this.score = score();
-    }
-    public String toString()
-    {
-        return super.toString() +
-                "\n*************************************";
-    }
-    private String getType()
-    {
-        return "LEAF[" + this.stepRemaining + "]: ";
-    }
-
-    private int score()
-    {
-        Move[] ms= null;
-        if(this.n == 2){
-            ms = new Move[]{this.previous, this};
-        }
-        if(this.n == 3){
-            ms = new Move[]{this.previous, this.previous, this};
-        }
-        if(this.n == 4){
-            ms = new Move[]{this.previous, this.previous, this.previous, this};
-        }
-        return bfs(ms);
-    }
-    public Leaf findBest()
-    {
-        if(this.stepRemaining == 0) {
-            return this;
-        }
-        return super.findBest();
-    }
-
-    public Point findMove(int p)
-    {
-        Point move = null;
-        Move m = this;
-        while(m.previous != null)
-        {
-            if(p == m.id) {
-                move = m.move;
-            }
-            m = m.previous;
-        }
-        return move;
-    }
+/**
+ * Created by kazik on 22.11.16.
+ */
+class Turn
+{
 }
 
 class Move {
@@ -69,17 +19,14 @@ class Move {
     public Point move;
     public int score;
     protected static Board board;
-    protected static int p;
-    protected static int n;
     public Move previous;
+    public Move previosFP;
     public List<Move> nextMoves = new LinkedList<Move>();
     protected int stepRemaining;
 
-    public Move(Board board, int P, int N)
+    public Move(Board board)
     {
         this.board = board;
-        this.p = P;
-        this.n = N;
         this.previous = null;
         this.score = 0;
         this.id = -1;
@@ -90,8 +37,21 @@ class Move {
         this.id = id;
         this.move = point;
         this.previous = prev;
+        this.previosFP = null;
         this.score = 0;
         this.stepRemaining = stepsRemain;
+
+        Move temp = prev;
+        System.err.println("insert move: " + id);
+        while(temp != null) {
+            System.err.println(id + " " + temp.id);
+            if (temp.id == id) {
+                this.previosFP = temp;
+                System.err.println(previosFP.move);
+                break;
+            }
+            temp = temp.previous;
+        }
     }
 
     private boolean isBusy(Point p)
@@ -104,9 +64,11 @@ class Move {
         }
         return this.previous.isBusy(p);
     }
-    public void insertNexts(Point[] possiilities, int stepsRemain)
+    public void insertNexts(int id, Point[] possiilities, int stepsRemain)
     {
+
         for (Point point : possiilities) {
+            System.err.println("POS" + point);
             if (!this.board.isBusy(point) && !this.isBusy(point)) {
                 this.nextMoves.add(new Move(id, point, this, stepsRemain));
             }
@@ -121,44 +83,33 @@ class Move {
         v[this.move.y][this.move.x] = true;
         previous.markMadeFields(v);
     }
-    public Leaf findBest()
-    {
-        Leaf best = null;
-        for(Move move : nextMoves){
-            Leaf t_b = move.findBest();
-            if (t_b != null && (best == null || t_b.score > best.score)) {
-                best = t_b;
-            }
-        }
-        return best;
-    }
 
     public String toString()
     {
-        return this.getType() + this.move + " " + score + '\n' + (this.previous != null ? this.previous.toString() : "");
+        return this.getType() + " id: " + this.id + " " +this.move  + '\n' + (this.previous != null ? this.previous.toString() : "");
     }
 
     private String getType()
     {
         return "INNER[" + this.stepRemaining + "]: ";
     }
-    public int bfs(Move[] points)
+
+    public void scoreTurn(Move[] lastTurn, int myId)
     {
         boolean[][] visited = new boolean[20][30];
         this.previous.markMadeFields(visited);
-        int fields = 0, score = 0;
+        int fields = 0;
         Point p;
-        int[] scores = new int[points.length];
-        for(int i = 0; i < points.length; i++) {
+        for(int i = 0; i < lastTurn.length; i++) {
             Stack<Point> stack = new Stack<Point>();
-            stack.push(points[i].move);
+            stack.push(lastTurn[i].move);
             fields = 0;
 
             while (!stack.empty()) {
                 p = stack.pop();
                 if (!board.isBusy(p) && !visited[p.y][p.x]) {
-                    if (p.equals(points[1])) {
-                        return 0;
+                    if (p.equals(lastTurn[1].move)) {
+                        this.score = 0;
                     }
                     visited[p.y][p.x] = true;
                     fields++;
@@ -167,12 +118,8 @@ class Move {
                     }
                 }
             }
-            scores[i] = fields;
+            this.score += (myId == i) ? fields : -fields;
         }
-        for(int i = 0; i < points.length; i++) {
-            score += points[i].id == this.p ? scores[i] : -scores[i];
-        }
-        return score;
     }
 }
 
@@ -223,7 +170,8 @@ class NPCs {
             }
         }
     }
-    public void insert(int id, Point point) throws Exception {
+    public void insert(int id, Point point) throws Exception
+    {
         if(point == null) {
             while (id < this.n - 1) {
                 npcs[id] = npcs[++id];
@@ -235,38 +183,38 @@ class NPCs {
         }
     }
 
-    public boolean defeated(int i){
+    public boolean defeated(int i)
+    {
         return npcs[i] == null && i != p;
     }
 
     public String toString()
     {
         String ret = "";
-        for(NPC npc : npcs){
+        for (NPC npc : npcs) {
             ret += npc.toString();
         }
         return ret;
     }
-    public String getMove(Board board)
+    public NPC[] getQueue()
     {
-        if(this.move == null) {
-            this.move = new Move(board, this.p, this.n);
-            this.makeMove(this.move, 0);
+        NPC[] ids = new NPC[this.n];
+        for(int i = 0; i < this.n; i++) {
+            ids[i] = npcs[i];
         }
-        Leaf best = this.move.findBest();
-        System.err.println("Move " + this.move);
-        return this.me.makeMove(best.findMove(this.p));
+        return ids;
     }
-    private void makeMove(Move move, int i)
+    public int playersCount()
     {
-        if(i >= 2 *this.n){
-
-        } else {
-            npcs[i%this.n].makeMove(move, i);
-            for(Move nextMove : move.nextMoves) {
-                this.makeMove(nextMove, i + 1);
-            }
-        }
+        return this.n;
+    }
+    public void makeMove(Point p)
+    {
+        me.makeMove(p);
+    }
+    public String getMove()
+    {
+        return me.getMove();
     }
 }
 
@@ -295,19 +243,16 @@ abstract class NPC
 
     public void makeMove(Move move, int remainig)
     {
-        move.insertNexts(this.getPossibilities(move), remainig);
-    }
-
-    private Point[] getPossibilities(Move m)
-    {
-        while(m.previous != null){
-            if(m.id == this.id) {
-                return m.move.getMoves();
-            } else {
-                m = m.previous;
-            }
+        Point pt;
+        if(move.previosFP != null){
+            System.err.print("HASPREV ");
+            pt = move.previosFP.move;
+        } else {
+            pt = this.body.peek();
         }
-        return this.body.peek().getMoves();
+
+        System.err.println("Make move for " + this.id + " " + pt);
+        move.insertNexts(this.id, pt.getMoves(), remainig);
     }
 }
 
@@ -338,8 +283,91 @@ class Enemy extends NPC
 /**
  * Created by kazik on 22.11.16.
  */
-public class MinMaxTree {
-    Map<Integer, Move[]>= new HashMap();
+class MinMaxTree
+{
+    private NPCs players;
+    private Board board;
+    private Move root;
+    private int me;
+    private int steps;
+
+    public MinMaxTree(NPCs npcs, Board board, int p, int depth)
+    {
+        this.root       = new Move(board);
+        this.me         = p;
+        this.board      = board;
+        this.players    = npcs;
+        this.steps      = depth;
+    }
+
+    public void makeMove()
+    {
+        NPC[] queue = players.getQueue();
+        Move root = new Move(this.board);
+        this.makeMove(root, queue, 0);
+
+        this.makeMove(this.findBest(root));
+    }
+
+    public String getMove()
+    {
+        return players.getMove();
+    }
+
+    private void makeMove(Move move)
+    {
+        while(move.previous != null)
+        {
+            if(move.id != this.me) {
+                move = move.previous;
+            }
+        }
+        players.makeMove(move.move);
+    }
+    public void makeMove(Move move, NPC[] queue, int depth)
+    {
+        System.err.print("MMF: " + move);
+        if(depth >= queue.length * this.steps){
+
+        } else {
+            queue[depth%queue.length].makeMove(move, depth);
+            for(Move nextMove : move.nextMoves) {
+                this.makeMove(nextMove, queue, depth + 1);
+            }
+        }
+    }
+    public Move findBest(Move move)
+    {
+        if(move.nextMoves == null) {
+            move.scoreTurn(this.getLastTurn(move), this.me);
+            return move;
+        } else {
+            Move best = null;
+            for(Move nextMove : move.nextMoves){
+                Move t_b = findBest(nextMove);
+                if ((best == null || t_b.score > best.score)) {
+                    best = t_b;
+                }
+            }
+            return best;
+        }
+    }
+    private Move[] getLastTurn(Move move)
+    {
+        Move[] ms= null;
+        int n= players.playersCount();
+        if(n == 2){
+            ms = new Move[]{move.previous, move};
+        }
+        if(n == 3){
+            ms = new Move[]{move.previous, move.previous, move};
+        }
+        if(n == 4){
+            ms = new Move[]{move.previous, move.previous, move.previous, move};
+        }
+        return ms;
+    }
+
 }
 class Ally extends NPC {
 
@@ -375,18 +403,26 @@ class Ally extends NPC {
         }
         return this.currentMove;
     }
+    public String getMove()
+    {
+        return this.currentMove;
+    }
 }
 
 class Board {
     int[][] board = new int[20][30];
     private NPCs npcs = null;
+    private MinMaxTree mmt;
 
-    public boolean isInitialized(){
+    public boolean isInitialized()
+    {
         return  npcs != null;
     }
 
-    public void init(int P, int N){
+    public void init(int P, int N)
+    {
         npcs = new NPCs(P, N, this);
+        mmt = new MinMaxTree(npcs, this, P, 2);
     }
     public void insert(int id, String row) throws Exception
     {
@@ -433,7 +469,8 @@ class Board {
 
     public String getMove()
     {
-        return npcs.getMove(this);
+        mmt.makeMove();
+        return mmt.getMove();
     }
 
     public boolean isBusy(Point p)

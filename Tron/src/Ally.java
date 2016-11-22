@@ -32,4 +32,8 @@ class Ally extends NPC {
         }
         return this.currentMove;
     }
+    public String getMove()
+    {
+        return this.currentMove;
+    }
 }
