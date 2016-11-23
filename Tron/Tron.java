@@ -1,6 +1,6 @@
 import java.util.Map;
 import javafx.util.Pair;
-import java.util.StringTokenizer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.io.*;
 import java.util.Stack;
@@ -155,6 +155,7 @@ class NPCs {
     private NPC[] npcs;
     private int p, n;
     private Move move;
+    private Board board;
 
     public NPCs(int P, int N, Board board)
     {
@@ -162,6 +163,7 @@ class NPCs {
         p = P;
         me = new Ally(P, board);
         npcs = new NPC[N];
+        this.board = board;
         for(int i = 0; i < N; i++) {
             if (i != P) {
                 npcs[i] = new Enemy(i, board);
@@ -208,13 +210,42 @@ class NPCs {
     {
         return this.n;
     }
-    public void makeMove(Point p)
+    public String makeMove()
     {
-        me.makeMove(p);
+        /*Point[][] Possibilies = new Point[this.n][];
+        for(int i = 0; i < 0; i++) {
+            Possibilies[i] = npcs[i].getPossibilities();
+        }
+
+        for(int i = 0; i < 0; i++) {
+            Possibilies[i] = npcs[i].getPossibilities();
+        }*/
+
+        Point[] possibs = me.getPossibilities();
+        List<Point> enemiesPos = getEnemiesPossibs();
+        int max = -1000000, t_m;
+        Point best = null;
+        for(Point possib : possibs){
+            if((t_m =board.score(possib, enemiesPos, this.p)) > max) {
+                max = t_m;
+                best = possib;
+            }
+            System.err.println(t_m + ": " + possib);
+        }
+        return me.makeMove(best);
     }
-    public String getMove()
+    private List<Point> getEnemiesPossibs()
     {
-        return me.getMove();
+        List<Point> enemiesPos = new LinkedList<Point>();
+        int k = 0;
+        for(int i = 0; i < this.n; i++) {
+            if (i == this.p) {
+
+            } else {
+                enemiesPos.addAll(Arrays.asList(npcs[i].getPossibilities()));
+            }
+        }
+        return enemiesPos;
     }
 }
 
@@ -241,18 +272,13 @@ abstract class NPC
         body.push(p);
     }
 
-    public void makeMove(Move move, int remainig)
+    public Point[] getPossibilities()
     {
-        Point pt;
-        if(move.previosFP != null){
-            System.err.print("HASPREV ");
-            pt = move.previosFP.move;
-        } else {
-            pt = this.body.peek();
-        }
-
-        System.err.println("Make move for " + this.id + " " + pt);
-        move.insertNexts(this.id, pt.getMoves(), remainig);
+        return body.peek().getMoves();
+    }
+    public Point getHead()
+    {
+        return body.peek();
     }
 }
 
@@ -311,7 +337,7 @@ class MinMaxTree
 
     public String getMove()
     {
-        return players.getMove();
+        return null;
     }
 
     private void makeMove(Move move)
@@ -322,7 +348,7 @@ class MinMaxTree
                 move = move.previous;
             }
         }
-        players.makeMove(move.move);
+        players.makeMove();
     }
     public void makeMove(Move move, NPC[] queue, int depth)
     {
@@ -330,7 +356,7 @@ class MinMaxTree
         if(depth >= queue.length * this.steps){
 
         } else {
-            queue[depth%queue.length].makeMove(move, depth);
+            //queue[depth%queue.length].makeMove(move, depth);
             for(Move nextMove : move.nextMoves) {
                 this.makeMove(nextMove, queue, depth + 1);
             }
@@ -369,9 +395,11 @@ class MinMaxTree
     }
 
 }
-class Ally extends NPC {
+class Ally extends NPC
+{
 
     private String currentMove = "RIGHT";
+
     public Ally(int id, Board board)
     {
         super(id, board);
@@ -381,6 +409,7 @@ class Ally extends NPC {
     {
         return "ALLY";
     }
+
     public Point[] getPossibilities()
     {
         return body.peek().getMoves(this.currentMove);
@@ -389,66 +418,70 @@ class Ally extends NPC {
     public String makeMove(Point p)
     {
         Point myPos = body.peek();
-        if(myPos.x < p.x){
+        if (myPos.x < p.x) {
             this.currentMove = "RIGHT";
         }
-        if(myPos.x > p.x){
+        if (myPos.x > p.x) {
             this.currentMove = "LEFT";
         }
-        if(myPos.y > p.y){
+        if (myPos.y > p.y) {
             this.currentMove = "UP";
         }
-        if(myPos.y < p.y){
+        if (myPos.y < p.y) {
             this.currentMove = "DOWN";
         }
         return this.currentMove;
     }
+
     public String getMove()
     {
         return this.currentMove;
     }
 }
 
-class Board {
+class Board
+{
     int[][] board = new int[20][30];
     private NPCs npcs = null;
-    private MinMaxTree mmt;
+    //private MinMaxTree mmt;
 
     public boolean isInitialized()
     {
-        return  npcs != null;
+        return npcs != null;
     }
 
     public void init(int P, int N)
     {
         npcs = new NPCs(P, N, this);
-        mmt = new MinMaxTree(npcs, this, P, 2);
+        //mmt = new MinMaxTree(npcs, this, P, 2);
     }
+
     public void insert(int id, String row) throws Exception
     {
-        if(!npcs.defeated(id)) {
+        if (!npcs.defeated(id)) {
             StringTokenizer t = new StringTokenizer(row);
             t.nextToken();
             t.nextToken();
             this.insert(id, Integer.parseInt(t.nextToken()), Integer.parseInt((t.nextToken())));
         }
     }
+
     private void insert(int id, int x, int y) throws Exception
     {
-        if(x == -1){
+        if (x == -1) {
             this.defeat(id);
         } else {
             npcs.insert(id, new Point(x, y));
-            board[y][x] = id+1;
+            board[y][x] = id + 1;
         }
     }
 
     private void defeat(int id) throws Exception
     {
         npcs.insert(id, null);
-        for(int i = 0; i < 20; i++){
-            for(int j = 0; j < 30; j++){
-                if(board[i][j] == id + 1){
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 30; j++) {
+                if (board[i][j] == id + 1) {
                     board[i][j] = 0;
                 }
             }
@@ -458,9 +491,9 @@ class Board {
     public String toString()
     {
         String r = "";
-        for(int[] row : board){
-            for(int x : row){
-                r +=x;
+        for (int[] row : board) {
+            for (int x : row) {
+                r += x;
             }
             r += '\n';
         }
@@ -469,8 +502,7 @@ class Board {
 
     public String getMove()
     {
-        mmt.makeMove();
-        return mmt.getMove();
+        return npcs.makeMove();
     }
 
     public boolean isBusy(Point p)
@@ -478,6 +510,45 @@ class Board {
         return !(p.x >= 0 && p.x < 30 && p.y >= 0 && p.y < 20 && board[p.y][p.x] == 0);
     }
 
+    public int score(Point me, List<Point> enemies, int p)
+    {
+        boolean[][] visited = new boolean[20][30];
+        int score = 0,
+                sSize = 0;
+        Queue<Point> myQueue = new LinkedList<Point>();
+        Queue<Point> eQueue = new LinkedList<Point>();
+        Point point = null;
+        myQueue.add(me);
+        for (Point e : enemies) {
+            eQueue.add(e);
+        }
+
+        while (!eQueue.isEmpty() || !myQueue.isEmpty()) {
+            sSize = myQueue.size();
+            for (int i = 0; i < sSize; i++) {
+                point = myQueue.poll();
+                if (!this.isBusy(point) && !visited[point.y][point.x]) {
+                    visited[point.y][point.x] = true;
+                    score++;
+                    for (Point pt : point.getMoves()) {
+                        myQueue.add(pt);
+                    }
+                }
+            }
+            sSize = eQueue.size();
+            for (int i = 0; i < sSize; i++) {
+                point = eQueue.poll();
+                if (!this.isBusy(point) && !visited[point.y][point.x]) {
+                    visited[point.y][point.x] = true;
+                    score--;
+                    for (Point pt : point.getMoves()) {
+                        eQueue.add(pt);
+                    }
+                }
+            }
+        }
+        return score;
+    }
 }
 class Point
 {

@@ -32,7 +32,7 @@ class MinMaxTree
 
     public String getMove()
     {
-        return players.getMove();
+        return null;
     }
 
     private void makeMove(Move move)
@@ -43,7 +43,7 @@ class MinMaxTree
                 move = move.previous;
             }
         }
-        players.makeMove(move.move);
+        players.makeMove();
     }
     public void makeMove(Move move, NPC[] queue, int depth)
     {
@@ -51,7 +51,7 @@ class MinMaxTree
         if(depth >= queue.length * this.steps){
 
         } else {
-            queue[depth%queue.length].makeMove(move, depth);
+            //queue[depth%queue.length].makeMove(move, depth);
             for(Move nextMove : move.nextMoves) {
                 this.makeMove(nextMove, queue, depth + 1);
             }

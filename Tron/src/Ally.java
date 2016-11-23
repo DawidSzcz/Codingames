@@ -1,6 +1,8 @@
-class Ally extends NPC {
+class Ally extends NPC
+{
 
     private String currentMove = "RIGHT";
+
     public Ally(int id, Board board)
     {
         super(id, board);
@@ -10,6 +12,7 @@ class Ally extends NPC {
     {
         return "ALLY";
     }
+
     public Point[] getPossibilities()
     {
         return body.peek().getMoves(this.currentMove);
@@ -18,20 +21,21 @@ class Ally extends NPC {
     public String makeMove(Point p)
     {
         Point myPos = body.peek();
-        if(myPos.x < p.x){
+        if (myPos.x < p.x) {
             this.currentMove = "RIGHT";
         }
-        if(myPos.x > p.x){
+        if (myPos.x > p.x) {
             this.currentMove = "LEFT";
         }
-        if(myPos.y > p.y){
+        if (myPos.y > p.y) {
             this.currentMove = "UP";
         }
-        if(myPos.y < p.y){
+        if (myPos.y < p.y) {
             this.currentMove = "DOWN";
         }
         return this.currentMove;
     }
+
     public String getMove()
     {
         return this.currentMove;

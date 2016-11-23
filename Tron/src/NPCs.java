@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -6,6 +7,7 @@ class NPCs {
     private NPC[] npcs;
     private int p, n;
     private Move move;
+    private Board board;
 
     public NPCs(int P, int N, Board board)
     {
@@ -13,6 +15,7 @@ class NPCs {
         p = P;
         me = new Ally(P, board);
         npcs = new NPC[N];
+        this.board = board;
         for(int i = 0; i < N; i++) {
             if (i != P) {
                 npcs[i] = new Enemy(i, board);
@@ -59,12 +62,41 @@ class NPCs {
     {
         return this.n;
     }
-    public void makeMove(Point p)
+    public String makeMove()
     {
-        me.makeMove(p);
+        /*Point[][] Possibilies = new Point[this.n][];
+        for(int i = 0; i < 0; i++) {
+            Possibilies[i] = npcs[i].getPossibilities();
+        }
+
+        for(int i = 0; i < 0; i++) {
+            Possibilies[i] = npcs[i].getPossibilities();
+        }*/
+
+        Point[] possibs = me.getPossibilities();
+        List<Point> enemiesPos = getEnemiesPossibs();
+        int max = -1000000, t_m;
+        Point best = null;
+        for(Point possib : possibs){
+            if((t_m =board.score(possib, enemiesPos, this.p)) > max) {
+                max = t_m;
+                best = possib;
+            }
+            System.err.println(t_m + ": " + possib);
+        }
+        return me.makeMove(best);
     }
-    public String getMove()
+    private List<Point> getEnemiesPossibs()
     {
-        return me.getMove();
+        List<Point> enemiesPos = new LinkedList<Point>();
+        int k = 0;
+        for(int i = 0; i < this.n; i++) {
+            if (i == this.p) {
+
+            } else {
+                enemiesPos.addAll(Arrays.asList(npcs[i].getPossibilities()));
+            }
+        }
+        return enemiesPos;
     }
 }

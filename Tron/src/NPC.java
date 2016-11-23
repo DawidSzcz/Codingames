@@ -23,17 +23,12 @@ abstract class NPC
         body.push(p);
     }
 
-    public void makeMove(Move move, int remainig)
+    public Point[] getPossibilities()
     {
-        Point pt;
-        if(move.previosFP != null){
-            System.err.print("HASPREV ");
-            pt = move.previosFP.move;
-        } else {
-            pt = this.body.peek();
-        }
-
-        System.err.println("Make move for " + this.id + " " + pt);
-        move.insertNexts(this.id, pt.getMoves(), remainig);
+        return body.peek().getMoves();
+    }
+    public Point getHead()
+    {
+        return body.peek();
     }
 }
