@@ -23,6 +23,7 @@ class Player
             for (int i = 0; i < N; i++) {
                 board.insert(i, reader.readLine());
             }
+            //System.err.println(board);
             System.out.println(board.getMove());
         }
     }

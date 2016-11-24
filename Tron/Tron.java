@@ -1,7 +1,4 @@
-import java.util.Map;
 import javafx.util.Pair;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.io.*;
 import java.util.Stack;
 import java.util.LinkedList;
@@ -145,6 +142,7 @@ class Player
             for (int i = 0; i < N; i++) {
                 board.insert(i, reader.readLine());
             }
+            //System.err.println(board);
             System.out.println(board.getMove());
         }
     }
@@ -175,9 +173,6 @@ class NPCs {
     public void insert(int id, Point point) throws Exception
     {
         if(point == null) {
-            while (id < this.n - 1) {
-                npcs[id] = npcs[++id];
-            }
             npcs[id] = null;
             n -= 1;
         } else {
@@ -198,54 +193,97 @@ class NPCs {
         }
         return ret;
     }
-    public NPC[] getQueue()
-    {
-        NPC[] ids = new NPC[this.n];
-        for(int i = 0; i < this.n; i++) {
-            ids[i] = npcs[i];
-        }
-        return ids;
-    }
-    public int playersCount()
-    {
-        return this.n;
-    }
+
     public String makeMove()
     {
-        /*Point[][] Possibilies = new Point[this.n][];
-        for(int i = 0; i < 0; i++) {
-            Possibilies[i] = npcs[i].getPossibilities();
-        }
-
-        for(int i = 0; i < 0; i++) {
-            Possibilies[i] = npcs[i].getPossibilities();
-        }*/
-
         Point[] possibs = me.getPossibilities();
-        List<Point> enemiesPos = getEnemiesPossibs();
         int max = -1000000, t_m;
         Point best = null;
-        for(Point possib : possibs){
-            if((t_m =board.score(possib, enemiesPos, this.p)) > max) {
-                max = t_m;
-                best = possib;
+        List<Point> myMoves = new LinkedList<Point>();
+        for(Point myMove : possibs){
+            if(board.isBusy(myMove)) {
+                t_m = -1000000;
+            } else {
+                myMoves.add(myMove);
+                if ((t_m = nextTurn(myMoves, getEnemiesHeads(), 1)) > max) {
+                    max = t_m;
+                    best = myMove;
+                }
+                myMoves.remove(myMove);
             }
-            System.err.println(t_m + ": " + possib);
+            //System.err.print(t_m + " " + myMove + "\n");
         }
         return me.makeMove(best);
     }
-    private List<Point> getEnemiesPossibs()
-    {
-        List<Point> enemiesPos = new LinkedList<Point>();
-        int k = 0;
-        for(int i = 0; i < this.n; i++) {
-            if (i == this.p) {
-
+    private int nextTurn(List<Point> myMoves, List<List<Point>> enemies, int depth) {
+        if(depth == 5) {
+            return board.score(myMoves, enemies);
+        } else {
+            if(depth%(enemies.size()+1) == 0) {
+                int max = -100000, t_m;
+                Point[] nextMoves = this.getNextMove(myMoves);
+                for(Point nextMove : nextMoves) {
+                    if(board.isBusy(nextMove)) {
+                        continue;
+                    } else {
+                        myMoves.add(nextMove);
+                        if ((t_m = nextTurn(myMoves, enemies, depth + 1)) > max) {
+                            max = t_m;
+                        }
+                        myMoves.remove(nextMove);
+                    }
+                }
+                return max;
             } else {
-                enemiesPos.addAll(Arrays.asList(npcs[i].getPossibilities()));
+                int min = 100000, t_m;
+                List<Point> enemy = enemies.get((depth - 1) % enemies.size());
+                //System.err.print("Enemy" + depth + enemy+ "\n");
+                Point[] nextMoves;
+                if(depth > enemies.size() +1) {
+                    nextMoves = this.getNextMove(enemy);
+                    for(Point nextMove : nextMoves) {
+                        enemy.add(nextMove);
+                        if((t_m = nextTurn(myMoves, enemies, depth+1)) < min) {
+                            min = t_m;
+                        }
+                        //System.err.print(t_m + " " + nextMove + "\n");
+                        enemy.remove(nextMove);
+                    }
+                } else {
+                    Point head =  enemy.get(0);
+                    nextMoves = head.getMoves();
+                    enemy.remove(head);
+                    for(Point nextMove : nextMoves) {
+                        enemy.add(nextMove);
+                        if((t_m = nextTurn(myMoves, enemies, depth+1)) < min) {
+                            min = t_m;
+                        }
+                        //System.err.print(t_m + " " + nextMove + "\n");
+                        enemy.remove(nextMove);
+                    }
+                    enemy.add(head);
+                }
+
+                return min;
             }
         }
-        return enemiesPos;
+    }
+    private Point[] getNextMove(List<Point> moves)
+    {
+        return moves.get(moves.size()-1).getMoves();
+    }
+    private List<List<Point>> getEnemiesHeads()
+    {
+        List<List<Point>> enemies = new LinkedList<List<Point>>();
+        for(int i = 0; i < this.n; i++) {
+            //System.err.print(npcs[i]);
+            if(!this.defeated(i)) {
+                List<Point> enemy = new LinkedList<Point>();
+                enemy.add(npcs[i].getHead());
+                enemies.add(enemy);
+            }
+        }
+        return enemies;
     }
 }
 
@@ -304,96 +342,6 @@ class Enemy extends NPC
     {
         return "ENEMY";
     }
-}
-
-/**
- * Created by kazik on 22.11.16.
- */
-class MinMaxTree
-{
-    private NPCs players;
-    private Board board;
-    private Move root;
-    private int me;
-    private int steps;
-
-    public MinMaxTree(NPCs npcs, Board board, int p, int depth)
-    {
-        this.root       = new Move(board);
-        this.me         = p;
-        this.board      = board;
-        this.players    = npcs;
-        this.steps      = depth;
-    }
-
-    public void makeMove()
-    {
-        NPC[] queue = players.getQueue();
-        Move root = new Move(this.board);
-        this.makeMove(root, queue, 0);
-
-        this.makeMove(this.findBest(root));
-    }
-
-    public String getMove()
-    {
-        return null;
-    }
-
-    private void makeMove(Move move)
-    {
-        while(move.previous != null)
-        {
-            if(move.id != this.me) {
-                move = move.previous;
-            }
-        }
-        players.makeMove();
-    }
-    public void makeMove(Move move, NPC[] queue, int depth)
-    {
-        System.err.print("MMF: " + move);
-        if(depth >= queue.length * this.steps){
-
-        } else {
-            //queue[depth%queue.length].makeMove(move, depth);
-            for(Move nextMove : move.nextMoves) {
-                this.makeMove(nextMove, queue, depth + 1);
-            }
-        }
-    }
-    public Move findBest(Move move)
-    {
-        if(move.nextMoves == null) {
-            move.scoreTurn(this.getLastTurn(move), this.me);
-            return move;
-        } else {
-            Move best = null;
-            for(Move nextMove : move.nextMoves){
-                Move t_b = findBest(nextMove);
-                if ((best == null || t_b.score > best.score)) {
-                    best = t_b;
-                }
-            }
-            return best;
-        }
-    }
-    private Move[] getLastTurn(Move move)
-    {
-        Move[] ms= null;
-        int n= players.playersCount();
-        if(n == 2){
-            ms = new Move[]{move.previous, move};
-        }
-        if(n == 3){
-            ms = new Move[]{move.previous, move.previous, move};
-        }
-        if(n == 4){
-            ms = new Move[]{move.previous, move.previous, move.previous, move};
-        }
-        return ms;
-    }
-
 }
 class Ally extends NPC
 {
@@ -460,9 +408,14 @@ class Board
     {
         if (!npcs.defeated(id)) {
             StringTokenizer t = new StringTokenizer(row);
-            t.nextToken();
-            t.nextToken();
-            this.insert(id, Integer.parseInt(t.nextToken()), Integer.parseInt((t.nextToken())));
+            int     x0 = Integer.parseInt(t.nextToken()),
+                    y0 = Integer.parseInt(t.nextToken()),
+                    x1 = Integer.parseInt(t.nextToken()),
+                    y1 = Integer.parseInt(t.nextToken());
+
+            //System.err.println(id + ": (" + x0 + ", " + y0 + ") (" + x1 + ", " + y1 + ")");
+            this.insert(id, x0, y0);
+            this.insert(id, x1, y1);
         }
     }
 
@@ -478,11 +431,14 @@ class Board
 
     private void defeat(int id) throws Exception
     {
-        npcs.insert(id, null);
-        for (int i = 0; i < 20; i++) {
-            for (int j = 0; j < 30; j++) {
-                if (board[i][j] == id + 1) {
-                    board[i][j] = 0;
+        if(!npcs.defeated(id)) {
+            //System.err.println("DEFEAT");
+            npcs.insert(id, null);
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 30; j++) {
+                    if (board[i][j] == id + 1) {
+                        board[i][j] = 0;
+                    }
                 }
             }
         }
@@ -510,7 +466,99 @@ class Board
         return !(p.x >= 0 && p.x < 30 && p.y >= 0 && p.y < 20 && board[p.y][p.x] == 0);
     }
 
-    public int score(Point me, List<Point> enemies, int p)
+    public int score(List<Point> myMoves, List<List<Point>> enemies)
+    {
+        //System.err.print("Enemies " + enemies + "\n");
+        //System.err.print("MyMoves " + myMoves + "\n");
+        boolean[][] visited = new boolean[20][30];
+        int     score = 0,
+                sSize = 0;
+        Queue<Point> myQueue = new LinkedList<Point>();
+        Queue<Point> eQueue = new LinkedList<Point>();
+        Point move = null;
+        List<Point> enemy = null;
+        List<Integer> dead = new LinkedList<Integer>();
+
+        for(int i = 0; i < myMoves.size(); i++) {
+            //make my move
+            move = myMoves.get(i);
+            if (!this.isBusy(move) && !visited[move.y][move.x]) {
+                if ( i == myMoves.size() - 1 ) {
+                    myQueue.add(move);
+                } else {
+                    visited[move.y][move.x] = true;
+                }
+            } else {
+                return -10000;
+            }
+
+            //make enemies moves
+            for (int j = 0; j < enemies.size(); j++) {
+                if(dead.contains(i)){
+                    continue;
+                }
+                enemy = enemies.get(j);
+                if (i < enemy.size() ) {
+                    move = enemy.get(i);
+
+                    if (!this.isBusy(move) && !visited[move.y][move.x]) {
+                        if (i == enemy.size() -1) {
+                            eQueue.add(move);
+                        } else {
+                            visited[move.y][move.x] = true;
+                        }
+                    } else {
+                        dead.add(j);
+                        if (enemies.size() == dead.size()) {
+                            return 10000;
+                        }
+                    }
+                } else {
+                    sSize = eQueue.size();
+                    for (int k = 0; k < sSize; k++) {
+                        move = eQueue.poll();
+                        if (!this.isBusy(move) && !visited[move.y][move.x]) {
+                            visited[move.y][move.x] = true;
+                            score--;
+                            for (Point pt : move.getMoves()) {
+                                eQueue.add(pt);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        while (!eQueue.isEmpty() || !myQueue.isEmpty()) {
+            sSize = myQueue.size();
+            for (int i = 0; i < sSize; i++) {
+                move = myQueue.poll();
+                if (!this.isBusy(move) && !visited[move.y][move.x]) {
+                    visited[move.y][move.x] = true;
+                    score++;
+                    for (Point pt : move.getMoves()) {
+                        myQueue.add(pt);
+                    }
+                }
+            }
+
+            sSize = eQueue.size();
+            for (int i = 0; i < sSize; i++) {
+                move = eQueue.poll();
+                if (!this.isBusy(move) && !visited[move.y][move.x]) {
+                    visited[move.y][move.x] = true;
+                    score--;
+                    for (Point pt : move.getMoves()) {
+                        eQueue.add(pt);
+                    }
+                }
+            }
+        }
+        return score;
+    }
+
+    public int score2(Point meFirst, Point meSecond, List<Point> enemies, int p)
     {
         boolean[][] visited = new boolean[20][30];
         int score = 0,
@@ -518,23 +566,19 @@ class Board
         Queue<Point> myQueue = new LinkedList<Point>();
         Queue<Point> eQueue = new LinkedList<Point>();
         Point point = null;
-        myQueue.add(me);
+
         for (Point e : enemies) {
             eQueue.add(e);
         }
 
+        //Make First
+        if (!this.isBusy(meFirst) && !visited[meFirst.y][meFirst.x]) {
+            visited[meFirst.y][meFirst.x] = true;
+            myQueue.add(meSecond);
+        } else {
+            return -1000;
+        }
         while (!eQueue.isEmpty() || !myQueue.isEmpty()) {
-            sSize = myQueue.size();
-            for (int i = 0; i < sSize; i++) {
-                point = myQueue.poll();
-                if (!this.isBusy(point) && !visited[point.y][point.x]) {
-                    visited[point.y][point.x] = true;
-                    score++;
-                    for (Point pt : point.getMoves()) {
-                        myQueue.add(pt);
-                    }
-                }
-            }
             sSize = eQueue.size();
             for (int i = 0; i < sSize; i++) {
                 point = eQueue.poll();
@@ -543,6 +587,18 @@ class Board
                     score--;
                     for (Point pt : point.getMoves()) {
                         eQueue.add(pt);
+                    }
+                }
+            }
+
+            sSize = myQueue.size();
+            for (int i = 0; i < sSize; i++) {
+                point = myQueue.poll();
+                if (!this.isBusy(point) && !visited[point.y][point.x]) {
+                    visited[point.y][point.x] = true;
+                    score++;
+                    for (Point pt : point.getMoves()) {
+                        myQueue.add(pt);
                     }
                 }
             }
