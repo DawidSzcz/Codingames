@@ -4,7 +4,8 @@ class Board
 {
     int[][] board = new int[20][30];
     private NPCs npcs = null;
-    //private MinMaxTree mmt;
+    private Queue<Point> myQueue = new LinkedList<Point>();
+    private Queue<Point> eQueue = new LinkedList<Point>();
 
     public boolean isInitialized()
     {
@@ -19,7 +20,7 @@ class Board
 
     public void insert(int id, String row) throws Exception
     {
-        if (!npcs.defeated(id)) {
+        if (npcs.aviable(id)) {
             StringTokenizer t = new StringTokenizer(row);
             int     x0 = Integer.parseInt(t.nextToken()),
                     y0 = Integer.parseInt(t.nextToken()),
@@ -41,10 +42,14 @@ class Board
             board[y][x] = id + 1;
         }
     }
+    public void insert(int id, Point p)
+    {
+        board[p.y][p.x] = id + 1;
+    }
 
     private void defeat(int id) throws Exception
     {
-        if(!npcs.defeated(id)) {
+        if(npcs.aviable(id)) {
             //System.err.println("DEFEAT");
             npcs.insert(id, null);
             for (int i = 0; i < 20; i++) {
@@ -79,67 +84,21 @@ class Board
         return !(p.x >= 0 && p.x < 30 && p.y >= 0 && p.y < 20 && board[p.y][p.x] == 0);
     }
 
-    public int score(List<Point> myMoves, List<List<Point>> enemies)
+    public int score(List<Point> heads)
     {
         //System.err.print("Enemies " + enemies + "\n");
         //System.err.print("MyMoves " + myMoves + "\n");
         boolean[][] visited = new boolean[20][30];
         int     score = 0,
                 sSize = 0;
-        Queue<Point> myQueue = new LinkedList<Point>();
-        Queue<Point> eQueue = new LinkedList<Point>();
         Point move = null;
-        List<Point> enemy = null;
-        List<Integer> dead = new LinkedList<Integer>();
 
-        for(int i = 0; i < myMoves.size(); i++) {
-            //make my move
-            move = myMoves.get(i);
-            if (!this.isBusy(move) && !visited[move.y][move.x]) {
-                if ( i == myMoves.size() - 1 ) {
-                    myQueue.add(move);
-                } else {
-                    visited[move.y][move.x] = true;
-                }
-            } else {
-                return -10000;
-            }
-
-            //make enemies moves
-            for (int j = 0; j < enemies.size(); j++) {
-                if(dead.contains(i)){
-                    continue;
-                }
-                enemy = enemies.get(j);
-                if (i < enemy.size() ) {
-                    move = enemy.get(i);
-
-                    if (!this.isBusy(move) && !visited[move.y][move.x]) {
-                        if (i == enemy.size() -1) {
-                            eQueue.add(move);
-                        } else {
-                            visited[move.y][move.x] = true;
-                        }
-                    } else {
-                        dead.add(j);
-                        if (enemies.size() == dead.size()) {
-                            return 10000;
-                        }
-                    }
-                } else {
-                    sSize = eQueue.size();
-                    for (int k = 0; k < sSize; k++) {
-                        move = eQueue.poll();
-                        if (!this.isBusy(move) && !visited[move.y][move.x]) {
-                            visited[move.y][move.x] = true;
-                            score--;
-                            for (Point pt : move.getMoves()) {
-                                eQueue.add(pt);
-                            }
-                        }
-                    }
-                    break;
-                }
+        for(Point p : heads.get(0).getMoves()) {
+            myQueue.add(p);
+        }
+        for(int i = 1; i < heads.size(); i++) {
+            for (Point p : heads.get(i).getMoves()) {
+                myQueue.add(p);
             }
         }
 
@@ -155,7 +114,6 @@ class Board
                     }
                 }
             }
-
             sSize = eQueue.size();
             for (int i = 0; i < sSize; i++) {
                 move = eQueue.poll();
@@ -164,54 +122,6 @@ class Board
                     score--;
                     for (Point pt : move.getMoves()) {
                         eQueue.add(pt);
-                    }
-                }
-            }
-        }
-        return score;
-    }
-
-    public int score2(Point meFirst, Point meSecond, List<Point> enemies, int p)
-    {
-        boolean[][] visited = new boolean[20][30];
-        int score = 0,
-                sSize = 0;
-        Queue<Point> myQueue = new LinkedList<Point>();
-        Queue<Point> eQueue = new LinkedList<Point>();
-        Point point = null;
-
-        for (Point e : enemies) {
-            eQueue.add(e);
-        }
-
-        //Make First
-        if (!this.isBusy(meFirst) && !visited[meFirst.y][meFirst.x]) {
-            visited[meFirst.y][meFirst.x] = true;
-            myQueue.add(meSecond);
-        } else {
-            return -1000;
-        }
-        while (!eQueue.isEmpty() || !myQueue.isEmpty()) {
-            sSize = eQueue.size();
-            for (int i = 0; i < sSize; i++) {
-                point = eQueue.poll();
-                if (!this.isBusy(point) && !visited[point.y][point.x]) {
-                    visited[point.y][point.x] = true;
-                    score--;
-                    for (Point pt : point.getMoves()) {
-                        eQueue.add(pt);
-                    }
-                }
-            }
-
-            sSize = myQueue.size();
-            for (int i = 0; i < sSize; i++) {
-                point = myQueue.poll();
-                if (!this.isBusy(point) && !visited[point.y][point.x]) {
-                    visited[point.y][point.x] = true;
-                    score++;
-                    for (Point pt : point.getMoves()) {
-                        myQueue.add(pt);
                     }
                 }
             }
